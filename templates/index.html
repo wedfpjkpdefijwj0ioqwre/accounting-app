@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="form-container">
+                <h4>Add Transaction</h4>
+                <form method="POST" action="{{ url_for('add_transaction') }}">
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" name="date" value="{{ now }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="description" name="description" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Amount</label>
+                        <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="" disabled selected>Select category</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Payment">Payment</option>
+                            <option value="Freelance">Freelance</option>
+                            <option value="Investment">Investment</option>
+                            <option value="Gift">Gift</option>
+                            <option value="Food">Food</option>
+                            <option value="Transportation">Transportation</option>
+                            <option value="Housing">Housing</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="type" id="income" value="income" checked>
+                            <label class="form-check-label" for="income">
+                                Income
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="type" id="expense" value="expense">
+                            <label class="form-check-label" for="expense">
+                                Expense
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add Transaction</button>
+                </form>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Current Balance</h5>
+                    <h2 class="card-text {% if balance >= 0 %}balance-positive{% else %}balance-negative{% endif %}">
+                        ${{ "%.2f"|format(balance) }}
+                    </h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Transaction History</h5>
+                    <a href="{{ url_for('export_excel') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-download"></i> Export
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if transactions %}
+                        <div class="list-group list-group-flush">
+                            {% for transaction in transactions %}
+                                <div class="list-group-item transaction-{{ transaction.type }}">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <div>
+                                            <h6 class="mb-1">{{ transaction.description }}</h6>
+                                            <small class="text-muted">{{ transaction.category }} • {{ transaction.date.strftime('%b %d, %Y') }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="fw-bold {% if transaction.type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                                                {% if transaction.type == 'income' %}+{% else %}-{% endif %}${{ "%.2f"|format(transaction.amount) }}
+                                            </span>
+                                            <div class="mt-1">
+                                                <form action="{{ url_for('delete_transaction', id=transaction.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this transaction?');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted">No transactions found. Add your first transaction!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set default date to today
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = today;
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+/* Custom styles for Accounting App */
+body {
+    background-color: #f5f5f5;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid rgba(0,0,0,.125);
+    font-weight: 600;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+    padding: 1rem 1.25rem;
+    transition: background-color 0.2s;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.transaction-income {
+    border-left: 4px solid #28a745;
+}
+
+.transaction-expense {
+    border-left: 4px solid #dc3545;
+}
+
+.balance-positive {
+    color: #28a745;
+}
+
+.balance-negative {
+    color: #dc3545;
+}
+
+.form-container {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-container {
+        margin-bottom: 1rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Animation for transaction items */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.list-group-item {
+    animation: fadeIn 0.3s ease-out;
+}

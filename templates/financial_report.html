@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Financial Report</h2>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Transactions
+        </a>
+    </div>
+
+    <!-- Date Range -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Date Range</h5>
+            <p class="card-text">{{ start_date.strftime('%B %d, %Y') }} to {{ end_date.strftime('%B %d, %Y') }}</p>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Income</h6>
+                    <h3 class="text-success">${{ "{:,.2f}".format(total_income) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Expenses</h6>
+                    <h3 class="text-danger">${{ "{:,.2f}".format(total_expenses) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Net Flow</h6>
+                    <h3 class="{% if net_flow >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        ${{ "{:,.2f}".format(net_flow) }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Net Flow Chart -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Net Cash Flow (30 Days)</h5>
+            <canvas id="netFlowChart" height="100"></canvas>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Income by Category -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Income by Category</h5>
+                    <canvas id="incomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses by Category -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Expenses by Category</h5>
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Recent Transactions</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Type</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions[-10:] %}
+                                <tr>
+                                    <td>{{ transaction.date.strftime('%b %d, %Y') }}</td>
+                                    <td>{{ transaction.description }}</td>
+                                    <td>{{ transaction.category }}</td>
+                                    <td>
+                                        <span class="badge {% if transaction.type == 'income' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ transaction.type|title }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end {% if transaction.type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                                        {% if transaction.type == 'income' %}+{% else %}-{% endif %}${{ "{:,.2f}".format(transaction.amount) }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-4">
+                    <p class="text-muted">No transactions found in the selected date range.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Hidden div to store chart data -->
+<div id="chart-data" 
+     data-date-labels='{{ date_labels|tojson|safe }}' 
+     data-net-flow='{{ net_flow_data|tojson|safe }}'
+     data-category-totals='{{ category_totals|tojson|safe }}'>
+</div>
+
+<script>
+// Parse data from the hidden div
+const chartData = document.getElementById('chart-data');
+const dateLabels = JSON.parse(chartData.dataset.dateLabels);
+const netFlowData = JSON.parse(chartData.dataset.netFlow);
+const categoryTotals = JSON.parse(chartData.dataset.categoryTotals);
+
+// Prepare category data
+const categoryData = {
+    income: {
+        labels: Object.entries(categoryTotals)
+            .filter(([_, amounts]) => amounts.income > 0)
+            .map(([category, _]) => category),
+        data: Object.values(categoryTotals)
+            .filter(amounts => amounts.income > 0)
+            .map(amounts => amounts.income),
+        backgroundColor: [
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+            'rgba(255, 159, 64, 0.6)'
+        ]
+    },
+    expense: {
+        labels: Object.entries(categoryTotals)
+            .filter(([_, amounts]) => amounts.expense > 0)
+            .map(([category, _]) => category),
+        data: Object.values(categoryTotals)
+            .filter(amounts => amounts.expense > 0)
+            .map(amounts => amounts.expense),
+        backgroundColor: [
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(255, 159, 64, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(54, 162, 235, 0.6)'
+        ]
+    }
+};
+
+// Net Flow Chart
+const netFlowCtx = document.getElementById('netFlowChart').getContext('2d');
+new Chart(netFlowCtx, {
+    type: 'line',
+    data: {
+        labels: dateLabels,
+        datasets: [{
+            label: 'Net Flow',
+            data: netFlowData,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return '$' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: false,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Income by Category Chart
+if (categoryData.income.labels.length > 0) {
+    const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+    new Chart(incomeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: categoryData.income.labels,
+            datasets: [{
+                data: categoryData.income.data,
+                backgroundColor: categoryData.income.backgroundColor,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            const formattedValue = value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            return `${label}: $${formattedValue} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+} else {
+    document.getElementById('incomeChart').parentElement.innerHTML = 
+        '<div class="text-center p-4"><p class="text-muted">No income data available</p></div>';
+}
+
+// Expense by Category Chart
+if (categoryData.expense.labels.length > 0) {
+    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+    new Chart(expenseCtx, {
+        type: 'doughnut',
+        data: {
+            labels: categoryData.expense.labels,
+            datasets: [{
+                data: categoryData.expense.data,
+                backgroundColor: categoryData.expense.backgroundColor,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            const formattedValue = value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            return `${label}: $${formattedValue} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+} else {
+    document.getElementById('expenseChart').parentElement.innerHTML = 
+        '<div class="text-center p-4"><p class="text-muted">No expense data available</p></div>';
+}
+</script>
+{% endblock %}
